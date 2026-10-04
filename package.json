@@ -10,6 +10,8 @@
   "build": {
     "appId": "com.example.keysounds",
     "productName": "Key Sounds",
+    "npmRebuild": false,
+    "asarUnpack": ["**/node_modules/uiohook-napi/**"],
     "files": [
       "main.js",
       "preload.js",
