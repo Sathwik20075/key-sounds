@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Key Sounds</title>
+<style>
+:root{--bg:#e8ecf1;--fg:#16202b;--card:#f8fafc;--bd:#c5ced9;--ac:#0f8f8a;--acf:#fff;--mut:#58677a;--key:#fff;--keyb:#aab6c4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--fg:#e6edf5;--card:#192230;--bd:#2d3a4b;--ac:#3cc8c0;--acf:#06201f;--mut:#8b9bb0;--key:#243246;--keyb:#0b1018}}
+:root[data-theme="dark"]{--bg:#10161d;--fg:#e6edf5;--card:#192230;--bd:#2d3a4b;--ac:#3cc8c0;--acf:#06201f;--mut:#8b9bb0;--key:#243246;--keyb:#0b1018}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
+main{max-width:860px;margin:0 auto}
+h1{font-size:1.6rem;margin:4px 0 2px;letter-spacing:-.01em}
+h2{font-size:1rem;margin:0 0 10px}
+p{margin:0 0 10px;color:var(--mut)}
+section{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:14px 0}
+button{font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+button.pri{background:var(--ac);color:var(--acf);border-color:var(--ac);font-weight:600}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.row{display:flex;justify-content:center;gap:5px;margin-bottom:5px}
+.key{width:clamp(28px,8.4vw,56px);height:clamp(44px,12vw,60px);background:var(--key);border:1px solid var(--bd);border-bottom:4px solid var(--keyb);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;overflow:hidden}
+.key[data-k=" "]{width:min(100%,300px)}
+.key b{font-size:1rem}
+.key small{font-size:9px;color:var(--mut);max-width:100%;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:12px}
+.key.m{border-color:var(--ac);border-bottom-color:var(--ac)}
+.key.on{background:var(--ac);color:var(--acf);transform:translateY(2px);border-bottom-width:2px}
+.key.on small{color:var(--acf)}
+.item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;margin-bottom:6px}
+.item.sel{border-color:var(--ac);box-shadow:inset 3px 0 0 var(--ac)}
+.item .nm{flex:1;text-align:left;border:0;background:none;padding:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .ks{font-size:12px;color:var(--mut)}
+canvas{width:100%;height:110px;display:block;border:1px solid var(--bd);border-radius:8px;background:var(--key)}
+label{display:block;font-size:13px;color:var(--mut);margin-top:8px}
+input[type=range]{width:100%;accent-color:var(--ac)}
+#file{display:none}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body><main>
+<h1>Key Sounds</h1>
+<p>Press an assigned key to play its sound. Keys with no sound stay silent.</p>
+
+<section>
+<h2>Keyboard</h2>
+<div id="kb"></div>
+<div class="bar">
+<button id="mode" aria-pressed="false">Mode: assign</button>
+<button id="clr">Clear all keys</button>
+<span id="msg" style="font-size:13px;color:var(--mut)"></span>
+<label style="margin:0 0 0 auto">Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" style="width:110px"></label>
+</div>
+</section>
+
+<section>
+<h2>Sounds</h2>
+<div id="list"></div>
+<div class="bar"><button class="pri" id="add">Add your own sound</button><input id="file" type="file" accept="audio/*" multiple><span style="font-size:13px;color:var(--mut)">Pick a sound, then click a key above to assign it.</span></div>
+</section>
+
+<section>
+<h2>Trim: <span id="tn"></span></h2>
+<canvas id="wf" width="800" height="110"></canvas>
+<label>Start: <span id="ts-v"></span><input id="ts" type="range" min="0" max="1" step="0.001" value="0"></label>
+<label>End: <span id="te-v"></span><input id="te" type="range" min="0" max="1" step="0.001" value="1"></label>
+<div class="bar"><button id="pv">Preview range</button><button class="pri" id="sv">Save trim</button><button id="rs">Reset to full</button></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const persist=()=>{try{localStorage.setItem('ks-map',JSON.stringify(map));localStorage.setItem('ks-trim',JSON.stringify(trims))}catch(e){}};
+const AC=window.AudioContext||window.webkitAudioContext;
+const ctx=new AC(), master=ctx.createGain();
+master.gain.value=.8;master.connect(ctx.destination);
+let sounds=[],sel='d0',clearMode=false;
+let map=LS('ks-map',{A:'d0',S:'d1',D:'d2',F:'d3',G:'d4',H:'d5',J:'d6',K:'d7'});
+let trims=LS('ks-trim',{});
+
+/* built-in sounds, generated with math so no files are needed */
+const TAU=Math.PI*2,rnd=()=>Math.random()*2-1;
+const sw=(t,f,a,k)=>TAU*(f*t+a*(1-Math.exp(-k*t))/k);
+const DEF=[
+['Kick',.5,t=>Math.sin(sw(t,45,130,25))*Math.exp(-t*7)],
+['Snare',.3,t=>(rnd()*.7+Math.sin(TAU*185*t)*.5)*Math.exp(-t*18)],
+['Hi-hat',.15,(t,i,s)=>{const n=rnd(),o=n-(s.p||0);s.p=n;return o*.5*Math.exp(-t*45)}],
+['Clap',.3,t=>rnd()*Math.exp(-t*14)*(t<.045?.5+.5*Math.sin(TAU*t/.015):1)*.8],
+['Tom',.5,t=>Math.sin(sw(t,90,90,12))*Math.exp(-t*6)],
+['Bell',1.2,t=>(Math.sin(TAU*880*t)+.5*Math.sin(TAU*1320*t)+.3*Math.sin(TAU*2217*t))*Math.exp(-t*3.5)*.5],
+['Bass',.9,t=>(Math.sin(TAU*55*t)+.4*Math.sin(TAU*110*t)+.2*Math.sin(TAU*165*t))*Math.exp(-t*3)*.6],
+['Zap',.4,t=>Math.sin(sw(t,200,1600,14))*Math.exp(-t*7)*.8]];
+DEF.forEach(([name,dur,fn],n)=>{
+  const sr=ctx.sampleRate,b=ctx.createBuffer(1,Math.floor(dur*sr),sr),d=b.getChannelData(0),st={};
+  for(let i=0;i<d.length;i++)d[i]=Math.max(-1,Math.min(1,fn(i/sr,i,st)*.9));
+  sounds.push({id:'d'+n,name,buf:b,custom:false});
+});
+
+/* storage for custom sounds (IndexedDB) */
+const db=new Promise(r=>{try{const q=indexedDB.open('ks',1);q.onupgradeneeded=()=>q.result.createObjectStore('s',{keyPath:'id'});q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
+const tx=async(m,f)=>{const d=await db;if(!d)return;return new Promise(r=>{try{const q=f(d.transaction('s',m).objectStore('s'));q.onsuccess=()=>r(q.result);q.onerror=()=>r()}catch(e){r()}})};
+
+const get=id=>sounds.find(s=>s.id===id);
+const range=s=>trims[s.id]||[0,s.buf.duration];
+function play(id,a,b){
+  const s=get(id);if(!s)return;if(ctx.state!=='running')ctx.resume();
+  const r=range(s);a=a??r[0];b=b??r[1];
+  const src=ctx.createBufferSource();src.buffer=s.buf;src.connect(master);
+  src.start(0,a,Math.max(.01,b-a));
+}
+
+/* keyboard */
+const ROWS=['1234567890','QWERTYUIOP','ASDFGHJKL','ZXCVBNM',' '];
+function drawKeys(){
+  $('#kb').innerHTML=ROWS.map(r=>'<div class="row">'+[...r].map(k=>{const s=get(map[k]);
+    return `<div class="key${s?' m':''}" data-k="${k}"><b>${k===' '?'Space':k}</b><small>${s?esc(s.name):''}</small></div>`}).join('')+'</div>').join('');
+}
+function flash(k){const el=document.querySelector(`.key[data-k="${k}"]`);if(!el)return;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),120)}
+$('#kb').addEventListener('click',e=>{
+  const el=e.target.closest('.key');if(!el)return;const k=el.dataset.k;
+  if(clearMode||e.shiftKey){delete map[k]}else{map[k]=sel;play(sel)}
+  persist();drawKeys();drawList();
+});
+$('#kb').addEventListener('contextmenu',e=>{const el=e.target.closest('.key');if(!el)return;e.preventDefault();delete map[el.dataset.k];persist();drawKeys();drawList()});
+$('#mode').onclick=()=>{clearMode=!clearMode;$('#mode').textContent='Mode: '+(clearMode?'clear':'assign');$('#mode').setAttribute('aria-pressed',clearMode);msg()};
+$('#clr').onclick=()=>{map={};persist();drawKeys();drawList()};
+$('#vol').oninput=e=>{master.gain.value=+e.target.value};
+function msg(){const s=get(sel);$('#msg').textContent=clearMode?'Click a key to remove its sound.':s?`Click a key to give it “${s.name}”.`:''}
+
+addEventListener('keydown',e=>{
+  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+  const t=e.target;if((t.tagName==='INPUT'&&t.type!=='range')||t.tagName==='TEXTAREA')return;
+  const k=e.key.length===1?e.key.toUpperCase():null;
+  if(k&&map[k]){e.preventDefault();play(map[k]);flash(k)}
+});
+
+/* sound list */
+function drawList(){
+  $('#list').innerHTML=sounds.map(s=>{
+    const ks=Object.keys(map).filter(k=>map[k]===s.id).map(k=>k===' '?'Space':k).join(' ');
+    return `<div class="item${s.id===sel?' sel':''}" data-id="${s.id}"><button class="nm" data-a="sel">${esc(s.name)}</button><span class="ks">${ks}</span><button data-a="play" aria-label="Play ${esc(s.name)}">Play</button>${s.custom?`<button data-a="del" aria-label="Delete ${esc(s.name)}">Delete</button>`:''}</div>`}).join('');
+  msg();
+}
+$('#list').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const id=b.closest('.item').dataset.id,a=b.dataset.a;
+  if(a==='play'){play(id)}
+  else if(a==='del'){
+    sounds=sounds.filter(s=>s.id!==id);for(const k in map)if(map[k]===id)delete map[k];delete trims[id];
+    tx('readwrite',o=>o.delete(id));persist();if(sel===id)sel='d0';drawKeys();drawList();loadTrim();
+  }else{sel=id;drawList();loadTrim()}
+});
+$('#add').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{
+  for(const f of e.target.files){
+    try{
+      const ab=await f.arrayBuffer(),copy=ab.slice(0),buf=await ctx.decodeAudioData(ab);
+      const id='c'+Date.now()+Math.floor(Math.random()*1e4),name=f.name.replace(/\.[^.]+$/,'');
+      sounds.push({id,name,buf,custom:true});sel=id;
+      tx('readwrite',o=>o.put({id,name,data:copy}));
+    }catch(err){alert(`Couldn’t read “${f.name}”. Try an MP3, WAV, OGG or M4A file.`)}
+  }
+  e.target.value='';drawList();loadTrim();
+};
+
+/* trimming */
+const ts=$('#ts'),te=$('#te'),cv=$('#wf');
+function loadTrim(){
+  const s=get(sel);if(!s)return;const r=range(s),d=s.buf.duration;
+  $('#tn').textContent=s.name;ts.max=te.max=d;ts.value=r[0];te.value=r[1];drawWave();
+}
+function drawWave(){
+  const s=get(sel);if(!s)return;
+  let a=+ts.value,b=+te.value;
+  $('#ts-v').textContent=a.toFixed(2)+' s';$('#te-v').textContent=b.toFixed(2)+' s';
+  const g=cv.getContext('2d'),W=cv.width,H=cv.height,d=s.buf.getChannelData(0),step=Math.max(1,Math.floor(d.length/W));
+  g.clearRect(0,0,W,H);g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ac');
+  for(let x=0;x<W;x++){let m=0;for(let i=x*step;i<(x+1)*step&&i<d.length;i+=Math.max(1,step>>5))m=Math.max(m,Math.abs(d[i]));
+    const h=Math.max(1,m*H*.9);g.fillRect(x,(H-h)/2,1,h)}
+  const dur=s.buf.duration,xa=a/dur*W,xb=b/dur*W;
+  g.fillStyle='rgba(120,130,145,.55)';g.fillRect(0,0,xa,H);g.fillRect(xb,0,W-xb,H);
+}
+ts.oninput=()=>{if(+ts.value>+te.value-.01)ts.value=+te.value-.01;drawWave()};
+te.oninput=()=>{if(+te.value<+ts.value+.01)te.value=+ts.value+.01;drawWave()};
+[ts,te].forEach(x=>x.onchange=()=>x.blur());
+$('#pv').onclick=()=>play(sel,+ts.value,+te.value);
+$('#sv').onclick=()=>{trims[sel]=[+ts.value,+te.value];persist();play(sel)};
+$('#rs').onclick=()=>{delete trims[sel];persist();loadTrim()};
+addEventListener('pointerdown',()=>{if(ctx.state!=='running')ctx.resume()},{once:true});
+
+/* start */
+drawKeys();drawList();loadTrim();
+(async()=>{
+  const all=(await tx('readonly',o=>o.getAll()))||[];
+  for(const r of all){try{sounds.push({id:r.id,name:r.name,buf:await ctx.decodeAudioData(r.data.slice(0)),custom:true})}catch(e){}}
+  drawKeys();drawList();
+})();
+</script></body></html>
