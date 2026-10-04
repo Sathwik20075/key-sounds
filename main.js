@@ -1,5 +1,6 @@
-const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut } = require('electron');
+const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, ipcMain, screen } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let win = null, tray = null, quitting = false;
 
@@ -29,6 +30,41 @@ try {
     if (name) keyNames[m.UiohookKey[name]] = id;
   }
 } catch (e) { console.warn('Background keys unavailable:', e.message); }
+
+// Picture overlay shown on the screen while charging
+let ov = null, ovTimer = null;
+function hideOverlay() {
+  clearTimeout(ovTimer);
+  const w = ov; ov = null;
+  if (!w) return;
+  try { w.webContents.executeJavaScript("document.body.classList.add('out')"); } catch (e) {}
+  setTimeout(() => { try { w.destroy(); } catch (e) {} }, 500);
+}
+ipcMain.on('overlay-hide', hideOverlay);
+ipcMain.on('overlay-show', (_e, buf, type, secs) => {
+  try {
+    hideOverlay();
+    const dir = app.getPath('userData');
+    for (const f of fs.readdirSync(dir)) if (/^overlay-/.test(f)) { try { fs.unlinkSync(path.join(dir, f)); } catch (e) {} }
+    const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' }[type] || 'png';
+    const stamp = Date.now();
+    fs.writeFileSync(path.join(dir, `overlay-${stamp}.${ext}`), Buffer.from(buf));
+    const htmlFile = path.join(dir, `overlay-${stamp}.html`);
+    fs.writeFileSync(htmlFile, `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;overflow:hidden;background:transparent}body{display:flex;align-items:center;justify-content:center}img{max-width:60vw;max-height:60vh;animation:in .5s ease both}@keyframes in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}body.out img{animation:out .5s ease both}@keyframes out{to{opacity:0;transform:scale(.9)}}</style><img src="overlay-${stamp}.${ext}">`);
+    const d = screen.getPrimaryDisplay().bounds;
+    ov = new BrowserWindow({
+      x: d.x, y: d.y, width: d.width, height: d.height,
+      transparent: true, frame: false, focusable: false, skipTaskbar: true,
+      alwaysOnTop: true, hasShadow: false, resizable: false, show: false,
+      webPreferences: { backgroundThrottling: false }
+    });
+    ov.setIgnoreMouseEvents(true);
+    ov.setAlwaysOnTop(true, 'screen-saver');
+    ov.loadFile(htmlFile);
+    ov.once('ready-to-show', () => { if (ov) ov.showInactive(); });
+    if (secs > 0) ovTimer = setTimeout(hideOverlay, secs * 1000);
+  } catch (e) { console.warn('Overlay failed:', e.message); }
+});
 
 function showWindow() {
   if (!win) return;
