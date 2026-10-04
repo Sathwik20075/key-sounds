@@ -80,11 +80,9 @@ function startKeyListener() {
     down.add(e.keycode);
     const k = keyNames[e.keycode];
     if (!k || !win) return;
-    // ignore shortcut combos like Ctrl+C (but let the modifier keys themselves play)
-    if (!/^(Control|Alt|Meta)/.test(k) && (e.ctrlKey || e.altKey || e.metaKey)) return;
     // when the window is focused it handles keys itself
     if (win.isVisible() && win.isFocused()) return;
-    win.webContents.send('global-key', k);
+    win.webContents.send('global-key', k, { ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey });
   });
   uIOhook.on('keyup', e => down.delete(e.keycode));
   uIOhook.start();
