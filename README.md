@@ -13,6 +13,15 @@ Go to the [Releases page](../../releases/latest) and download the file for your 
 The app is not code-signed, so Windows and Mac may show a warning the first time.
 Windows: click "More info", then "Run anyway". Mac: right-click the app, choose Open.
 
+## Background mode
+
+Close the window and Key Sounds keeps running in the system tray (near the clock), so your keys still play sounds while you use other apps. Right-click the tray icon and choose Quit to stop it completely.
+
+- Turn background sounds on or off with Ctrl+Alt+K (or the tick box in the app). Turn it off when you want to type normally without sounds.
+- The app only reacts to keys you assigned a sound to. It does not record, store or send what you type.
+- Mac: allow Key Sounds under System Settings > Privacy & Security > Accessibility and Input Monitoring.
+- Linux: works on X11. Wayland desktops may block global keys.
+
 ## Run from source
 
 Requires [Node.js](https://nodejs.org).
