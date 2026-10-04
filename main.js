@@ -41,7 +41,7 @@ function hideOverlay() {
   setTimeout(() => { try { w.destroy(); } catch (e) {} }, 500);
 }
 ipcMain.on('overlay-hide', hideOverlay);
-ipcMain.on('overlay-show', (_e, buf, type, secs) => {
+ipcMain.on('overlay-show', (_e, buf, type, secs, opts) => {
   try {
     hideOverlay();
     const dir = app.getPath('userData');
@@ -50,7 +50,30 @@ ipcMain.on('overlay-show', (_e, buf, type, secs) => {
     const stamp = Date.now();
     fs.writeFileSync(path.join(dir, `overlay-${stamp}.${ext}`), Buffer.from(buf));
     const htmlFile = path.join(dir, `overlay-${stamp}.html`);
-    fs.writeFileSync(htmlFile, `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;overflow:hidden;background:transparent}body{display:flex;align-items:center;justify-content:center}img{max-width:60vw;max-height:60vh;animation:in .5s ease both}@keyframes in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}body.out img{animation:out .5s ease both}@keyframes out{to{opacity:0;transform:scale(.9)}}</style><img src="overlay-${stamp}.${ext}">`);
+    const o = Object.assign({ size: 'small', anim: 'float', pos: 'center' }, opts || {});
+    const H = { small: 14, medium: 24, large: 40 }[o.size] || 14;
+    const [av, jh] = { center: ['center', 'center'], 'top-left': ['flex-start', 'flex-start'], 'top-right': ['flex-start', 'flex-end'],
+      'bottom-left': ['flex-end', 'flex-start'], 'bottom-right': ['flex-end', 'flex-end'] }[o.pos] || ['center', 'center'];
+    const anim = { float: 'float 2.5s ease-in-out infinite', bounce: 'bounce .9s cubic-bezier(.3,0,.4,1) infinite',
+      pulse: 'pulse 1.2s ease-in-out infinite', swing: 'swing 1.6s ease-in-out infinite', slide: 'slide 5s linear infinite' }[o.anim] || 'none';
+    const top = o.pos.startsWith('top') ? 'top:4vh' : o.pos.startsWith('bottom') ? 'bottom:4vh' : `top:calc(50% - ${H / 2}vh)`;
+    const layout = o.anim === 'slide'
+      ? `.w{position:relative}img{position:absolute;left:0;${top}}`
+      : `.w{display:flex;align-items:${av};justify-content:${jh};padding:4vh 3vw}`;
+    fs.writeFileSync(htmlFile, `<!doctype html><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;overflow:hidden;background:transparent}
+.w{width:100%;height:100%;box-sizing:border-box;animation:in .5s ease both}
+${layout}
+img{height:${H}vh;width:auto;max-width:40vw;object-fit:contain;animation:${anim}}
+@keyframes in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+body.out .w{animation:out .5s ease both}
+@keyframes out{to{opacity:0;transform:scale(.9)}}
+@keyframes float{50%{transform:translateY(-3vh)}}
+@keyframes bounce{50%{transform:translateY(-6vh)}}
+@keyframes pulse{50%{transform:scale(1.18)}}
+@keyframes swing{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(100vw)}}
+</style><div class="w"><img src="overlay-${stamp}.${ext}"></div>`);
     const d = screen.getPrimaryDisplay().bounds;
     ov = new BrowserWindow({
       x: d.x, y: d.y, width: d.width, height: d.height,

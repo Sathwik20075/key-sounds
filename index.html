@@ -85,6 +85,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <div id="cp"></div>
 <div class="bar"><label class="ck"><input type="checkbox" id="cpe"> Show pictures</label>
 <label class="ck">Show for <select id="cpd" style="width:auto;margin:0"><option value="3">3 seconds</option><option value="6">6 seconds</option><option value="10">10 seconds</option><option value="0">until unplugged</option></select></label></div>
+<div class="bar"><label class="ck">Size <select id="cps1" style="width:auto;margin:0"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label>
+<label class="ck">Animation <select id="cpa" style="width:auto;margin:0"><option value="float">Float</option><option value="bounce">Bounce</option><option value="pulse">Pulse</option><option value="swing">Swing</option><option value="slide">Slide across screen</option><option value="none">None</option></select></label>
+<label class="ck">Position <select id="cpp" style="width:auto;margin:0"><option value="center">Center</option><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option><option value="bottom-right">Bottom right</option></select></label></div>
 <input type="file" id="cpf" accept="image/*" hidden>
 </section>
 
@@ -266,13 +269,13 @@ if(navigator.getBattery){
 /* charging pictures (desktop app) */
 const TIERS=[['lo','Below 40%'],['mid','40% to 79%'],['hi','80% to full']];
 const tier=l=>l<.4?'lo':l<.8?'mid':'hi';
-let cp=LS('ks-cp',{on:true,secs:6}),imgs={},cpTier='',lastTier='';
+let cp={on:true,secs:6,size:'small',anim:'float',pos:'center',...LS('ks-cp',{})},imgs={},cpTier='',lastTier='';
 const saveCp=()=>{try{localStorage.setItem('ks-cp',JSON.stringify(cp))}catch(e){}};
-function showTier(t,force){const i=imgs[t];if(!window.keyApi||!i||(!cp.on&&!force))return;keyApi.showOverlay(i.buf,i.type,cp.secs)}
+function showTier(t,force){const i=imgs[t];if(!window.keyApi||!i||(!cp.on&&!force))return;keyApi.showOverlay(i.buf,i.type,cp.secs,{size:cp.size,anim:cp.anim,pos:cp.pos})}
 function drawCP(){
   $('#cp').innerHTML=TIERS.map(([t,l])=>{const i=imgs[t];
     return `<div class="item"><b style="min-width:105px">${l}</b>${i?`<img src="${i.url}" alt="" style="height:40px;border-radius:4px">`:'<span class="ks">No picture</span>'}<span style="flex:1"></span><button data-t="${t}" data-c="pick">Choose</button>${i?`<button data-t="${t}" data-c="show">Preview</button><button data-t="${t}" data-c="rm">Remove</button>`:''}</div>`}).join('');
-  $('#cpe').checked=cp.on;$('#cpd').value=String(cp.secs);
+  $('#cpe').checked=cp.on;$('#cpd').value=String(cp.secs);$('#cps1').value=cp.size;$('#cpa').value=cp.anim;$('#cpp').value=cp.pos;
 }
 if(window.keyApi){
   $('#cps').style.display='block';
@@ -291,6 +294,7 @@ if(window.keyApi){
   };
   $('#cpe').onchange=e=>{cp.on=e.target.checked;saveCp();if(!cp.on)keyApi.hideOverlay()};
   $('#cpd').onchange=e=>{cp.secs=+e.target.value;saveCp()};
+  for(const[id,key]of[['cps1','size'],['cpa','anim'],['cpp','pos']])$('#'+id).onchange=e=>{cp[key]=e.target.value;saveCp();const t=['lo','mid','hi'].find(x=>imgs[x]);if(t)showTier(t,true)};
 }
 function chg(b){if(b.charging){lastTier=tier(b.level);showTier(lastTier)}else{lastTier='';window.keyApi&&keyApi.hideOverlay()}}
 function lvl(b){const t=tier(b.level);if(t!==lastTier){lastTier=t;showTier(t)}}
