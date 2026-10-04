@@ -33,7 +33,7 @@
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0"
   },
-  "author": "Your Name <you@example.com>",
+  "author": "Akkalapotu Sathwik <Sakkalap@student.gitam.edu.com>",
   "license": "MIT",
   "dependencies": {
     "uiohook-napi": "^1.5.4"
