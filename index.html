@@ -19,11 +19,15 @@ button:hover{border-color:var(--ac)}
 button.pri{background:var(--ac);color:var(--acf);border-color:var(--ac);font-weight:600}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
-.row{display:flex;justify-content:center;gap:5px;margin-bottom:5px}
-.key{width:clamp(28px,8.4vw,56px);height:clamp(44px,12vw,60px);background:var(--key);border:1px solid var(--bd);border-bottom:4px solid var(--keyb);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;overflow:hidden}
-.key[data-k=" "]{width:min(100%,300px)}
-.key b{font-size:1rem}
-.key small{font-size:9px;color:var(--mut);max-width:100%;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:12px}
+#kb{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:4px}
+.key{flex:var(--u,1) 1 0;min-width:0;height:clamp(38px,6.2vw,54px);background:var(--key);border:1px solid var(--bd);border-bottom:3px solid var(--keyb);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;overflow:hidden}
+.row.fr .key{height:clamp(28px,4.2vw,36px)}
+.key b{font-size:clamp(9px,1.5vw,13px);font-weight:600}
+.key small{font-size:clamp(6px,.95vw,9px);color:var(--mut);max-width:100%;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:10px}
+.stack{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px}
+.stack .key{height:auto;flex:1 1 0;border-bottom-width:2px}
+.stack small{display:none}
 .key.m{border-color:var(--ac);border-bottom-color:var(--ac)}
 .key.on{background:var(--ac);color:var(--acf);transform:translateY(2px);border-bottom-width:2px}
 .key.on small{color:var(--acf)}
@@ -32,6 +36,7 @@ button.pri{background:var(--ac);color:var(--acf);border-color:var(--ac);font-wei
 .item .nm{flex:1;text-align:left;border:0;background:none;padding:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item .ks{font-size:12px;color:var(--mut)}
 canvas{width:100%;height:110px;display:block;border:1px solid var(--bd);border-radius:8px;background:var(--key)}
+select{font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;width:100%;margin-top:4px}
 label{display:block;font-size:13px;color:var(--mut);margin-top:8px}
 input[type=range]{width:100%;accent-color:var(--ac)}
 #file{display:none}
@@ -58,6 +63,13 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <div class="bar"><button class="pri" id="add">Add your own sound</button><input id="file" type="file" accept="audio/*" multiple><span style="font-size:13px;color:var(--mut)">Pick a sound, then click a key above to assign it.</span></div>
 </section>
 
+<section id="pw" style="display:none">
+<h2>Charger sounds</h2>
+<label>When the charger is plugged in <select id="pon"></select></label>
+<label>When the charger is unplugged <select id="poff"></select></label>
+<div class="bar"><button id="ptn">Test plug-in sound</button><button id="ptf">Test unplug sound</button></div>
+</section>
+
 <section>
 <h2>Trim: <span id="tn"></span></h2>
 <canvas id="wf" width="800" height="110"></canvas>
@@ -75,7 +87,8 @@ const AC=window.AudioContext||window.webkitAudioContext;
 const ctx=new AC(), master=ctx.createGain();
 master.gain.value=.8;master.connect(ctx.destination);
 let sounds=[],sel='d0',clearMode=false;
-let map=LS('ks-map',{A:'d0',S:'d1',D:'d2',F:'d3',G:'d4',H:'d5',J:'d6',K:'d7'});
+let map=LS('ks-map',{KeyA:'d0',KeyS:'d1',KeyD:'d2',KeyF:'d3',KeyG:'d4',KeyH:'d5',KeyJ:'d6',KeyK:'d7'});
+(()=>{const m={};for(const k in map){const n=k.length>1?k:k===' '?'Space':/\d/.test(k)?'Digit'+k:'Key'+k;m[n]=map[k]}map=m})();
 let trims=LS('ks-trim',{});
 
 /* built-in sounds, generated with math so no files are needed */
@@ -110,10 +123,22 @@ function play(id,a,b){
 }
 
 /* keyboard */
-const ROWS=['1234567890','QWERTYUIOP','ASDFGHJKL','ZXCVBNM',' '];
+/* full laptop layout: [code, label, width] */
+const L=(c,l,u=1)=>[c,l,u];
+const FN=Array.from({length:12},(_,i)=>L('F'+(i+1),'F'+(i+1)));
+const LET=[...'QWERTYUIOP'].map(c=>L('Key'+c,c));
+const ROWS=[
+ {fr:1,k:[L('Escape','Esc'),...FN,L('Delete','Del')]},
+ {k:[L('Backquote','`'),...[...'1234567890'].map(d=>L('Digit'+d,d)),L('Minus','-'),L('Equal','='),L('Backspace','Bksp',2)]},
+ {k:[L('Tab','Tab',1.5),...LET,L('BracketLeft','['),L('BracketRight',']'),L('Backslash','\\',1.5)]},
+ {k:[L('CapsLock','Caps',1.75),...[...'ASDFGHJKL'].map(c=>L('Key'+c,c)),L('Semicolon',';'),L('Quote',"'"),L('Enter','Enter',2.25)]},
+ {k:[L('ShiftLeft','Shift',2.25),...[...'ZXCVBNM'].map(c=>L('Key'+c,c)),L('Comma',','),L('Period','.'),L('Slash','/'),L('ShiftRight','Shift',2.75)]},
+ {k:[L('ControlLeft','Ctrl',1.25),L('MetaLeft','Win',1.25),L('AltLeft','Alt',1.25),L('Space','Space',5.75),L('AltRight','Alt',1.25),L('ControlRight','Ctrl',1.25),L('ArrowLeft','←'),{stack:[L('ArrowUp','↑'),L('ArrowDown','↓')]},L('ArrowRight','→')]}
+];
+const LABEL={};ROWS.forEach(r=>r.k.forEach(x=>(x.stack||[x]).forEach(y=>LABEL[y[0]]=y[1])));
+const keyHtml=([c,l,u])=>{const s=get(map[c]);return `<div class="key${s?' m':''}" data-k="${c}" style="--u:${u}"><b>${l}</b><small>${s?esc(s.name):''}</small></div>`};
 function drawKeys(){
-  $('#kb').innerHTML=ROWS.map(r=>'<div class="row">'+[...r].map(k=>{const s=get(map[k]);
-    return `<div class="key${s?' m':''}" data-k="${k}"><b>${k===' '?'Space':k}</b><small>${s?esc(s.name):''}</small></div>`}).join('')+'</div>').join('');
+  $('#kb').innerHTML=ROWS.map(r=>`<div class="row${r.fr?' fr':''}">`+r.k.map(x=>x.stack?`<div class="stack">${x.stack.map(keyHtml).join('')}</div>`:keyHtml(x)).join('')+'</div>').join('');
 }
 function flash(k){const el=document.querySelector(`.key[data-k="${k}"]`);if(!el)return;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),120)}
 $('#kb').addEventListener('click',e=>{
@@ -128,10 +153,11 @@ $('#vol').oninput=e=>{master.gain.value=+e.target.value};
 function msg(){const s=get(sel);$('#msg').textContent=clearMode?'Click a key to remove its sound.':s?`Click a key to give it “${s.name}”.`:''}
 
 addEventListener('keydown',e=>{
-  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.repeat)return;
+  if(!/^(Control|Alt|Meta)/.test(e.code)&&(e.ctrlKey||e.altKey||e.metaKey))return;
   const t=e.target;if((t.tagName==='INPUT'&&t.type!=='range')||t.tagName==='TEXTAREA')return;
-  const k=e.key.length===1?e.key.toUpperCase():null;
-  if(k&&map[k]){e.preventDefault();play(map[k]);flash(k)}
+  const k=e.code;
+  if(map[k]){e.preventDefault();play(map[k]);flash(k)}
 });
 
 /* background play (desktop app only) */
@@ -145,18 +171,39 @@ if(window.keyApi){
     $('#msg').textContent='Background sounds '+(bg.checked?'on':'off')});
 }
 
+/* charger sounds */
+let power=LS('ks-power',{on:'d5',off:'d7'});
+const savePower=()=>{try{localStorage.setItem('ks-power',JSON.stringify(power))}catch(e){}};
+const opts=cur=>'<option value="">No sound</option>'+sounds.map(s=>`<option value="${s.id}"${s.id===cur?' selected':''}>${esc(s.name)}</option>`).join('');
+function drawPower(){$('#pon').innerHTML=opts(power.on);$('#poff').innerHTML=opts(power.off)}
+$('#pon').onchange=e=>{power.on=e.target.value;savePower();if(power.on)play(power.on)};
+$('#poff').onchange=e=>{power.off=e.target.value;savePower();if(power.off)play(power.off)};
+$('#ptn').onclick=()=>power.on&&play(power.on);
+$('#ptf').onclick=()=>power.off&&play(power.off);
+if(navigator.getBattery){
+  navigator.getBattery().then(b=>{
+    $('#pw').style.display='block';
+    let was=b.charging,last=0;
+    b.addEventListener('chargingchange',()=>{
+      if(b.charging===was)return;was=b.charging;
+      const now=Date.now();if(now-last<700)return;last=now;
+      const id=b.charging?power.on:power.off;if(id)play(id);
+    });
+  }).catch(()=>{});
+}
+
 /* sound list */
 function drawList(){
   $('#list').innerHTML=sounds.map(s=>{
-    const ks=Object.keys(map).filter(k=>map[k]===s.id).map(k=>k===' '?'Space':k).join(' ');
+    const ks=Object.keys(map).filter(k=>map[k]===s.id).map(k=>LABEL[k]||k).join(' ');
     return `<div class="item${s.id===sel?' sel':''}" data-id="${s.id}"><button class="nm" data-a="sel">${esc(s.name)}</button><span class="ks">${ks}</span><button data-a="play" aria-label="Play ${esc(s.name)}">Play</button>${s.custom?`<button data-a="del" aria-label="Delete ${esc(s.name)}">Delete</button>`:''}</div>`}).join('');
-  msg();
+  msg();drawPower();
 }
 $('#list').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;const id=b.closest('.item').dataset.id,a=b.dataset.a;
   if(a==='play'){play(id)}
   else if(a==='del'){
-    sounds=sounds.filter(s=>s.id!==id);for(const k in map)if(map[k]===id)delete map[k];delete trims[id];
+    sounds=sounds.filter(s=>s.id!==id);for(const k in map)if(map[k]===id)delete map[k];delete trims[id];for(const k of ['on','off'])if(power[k]===id)power[k]='';savePower();
     tx('readwrite',o=>o.delete(id));persist();if(sel===id)sel='d0';drawKeys();drawList();loadTrim();
   }else{sel=id;drawList();loadTrim()}
 });
