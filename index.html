@@ -79,6 +79,17 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <div id="ev"></div>
 </section>
 
+<section id="shs" style="display:none">
+<h2>Shortcuts</h2>
+<p>Hold two or more keys together to open a website or an app. It works while Key Sounds runs in the tray.</p>
+<div id="shl"></div>
+<div class="bar"><button id="shr">Record keys</button><b id="shk" style="min-width:60px"></b>
+<select id="shkind" style="width:auto;margin:0"><option value="url">Website</option><option value="app">App or file</option></select>
+<input id="shu" placeholder="https://example.com" style="font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;flex:1;min-width:180px">
+<button id="shp" style="display:none">Choose app…</button><button class="pri" id="sha">Add shortcut</button></div>
+<label class="ck" style="margin-top:10px">Hold the keys for <select id="shh" style="width:auto;margin:0"><option value="200">0.2 s</option><option value="300">0.3 s</option><option value="500">0.5 s</option><option value="1000">1 s</option></select> <span style="color:var(--mut)">(stops accidental opens while typing)</span></label>
+</section>
+
 <section id="cps" style="display:none">
 <h2>Charging pictures</h2>
 <p>While the laptop is charging, a picture of your choice appears on the screen, depending on the battery level. Use an image, sticker, GIF, short video or emoji.</p>
@@ -177,6 +188,7 @@ $('#vol').oninput=e=>{master.gain.value=+e.target.value};
 function msg(){const s=get(sel);$('#msg').textContent=clearMode?'Click a key to remove its sound.':s?`Click a key to give it “${s.name}”.`:''}
 
 addEventListener('keydown',e=>{
+  if(recording){e.preventDefault();recHeld.add(e.code);if(!recKeys.includes(e.code))recKeys.push(e.code);$('#shk').textContent=recKeys.map(k=>LABEL[k]||k).join(' + ');return}
   if(e.repeat)return;
   const t=e.target;if((t.tagName==='INPUT'&&!['range','checkbox'].includes(t.type))||t.tagName==='TEXTAREA')return;
   if(press(e.code,{ctrl:e.ctrlKey,alt:e.altKey,shift:e.shiftKey,meta:e.metaKey}))e.preventDefault();
@@ -273,6 +285,34 @@ if(navigator.getBattery){
       if(b.charging&&b.level>=1){if(!full)evp('full');full=true}else if(b.level<1)full=false;
     });
   }).catch(()=>{});
+}
+
+/* shortcuts: keys held together open a website or app (desktop app) */
+let chordsList=LS('ks-chords',[]),recording=false,recKeys=[],pickedApp='';
+const recHeld=new Set();
+if(window.keyApi&&keyApi.setChords){
+  $('#shs').style.display='block';
+  const hold=LS('ks-hold',300);$('#shh').value=String(hold);
+  const sync=()=>{try{localStorage.setItem('ks-chords',JSON.stringify(chordsList));localStorage.setItem('ks-hold',$('#shh').value)}catch(e){}
+    keyApi.setChords(chordsList.map(c=>({...c,hold:+$('#shh').value})))};
+  const draw=()=>{$('#shl').innerHTML=chordsList.length?chordsList.map((c,i)=>`<div class="item"><b>${c.keys.map(k=>esc(LABEL[k]||k)).join(' + ')}</b><span class="nm" style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">opens ${esc(c.target)}</span><button data-i="${i}">Delete</button></div>`).join(''):'<p>No shortcuts yet.</p>'};
+  $('#shr').onclick=()=>{recording=true;recKeys=[];recHeld.clear();$('#shk').textContent='';$('#shr').textContent='Press the keys together…'};
+  addEventListener('keyup',e=>{if(!recording)return;recHeld.delete(e.code);if(!recHeld.size){recording=false;$('#shr').textContent='Record keys'}});
+  $('#shkind').onchange=e=>{const app=e.target.value==='app';$('#shu').style.display=app?'none':'';$('#shp').style.display=app?'':'none'};
+  $('#shp').onclick=async()=>{const p=await keyApi.pickApp();if(p){pickedApp=p;$('#shp').textContent=p.split(/[\\/]/).pop()}};
+  $('#sha').onclick=()=>{
+    if(recKeys.length<2){alert('Click Record keys, then press and hold two or more keys together.');return}
+    const kind=$('#shkind').value;let target;
+    if(kind==='url'){
+      let u=$('#shu').value.trim();if(!u)return;if(!/^[a-z]+:\/\//i.test(u))u='https://'+u;
+      try{const x=new URL(u);if(!/^https?:$/.test(x.protocol))throw 0;target=x.href}catch(e){alert('That doesn’t look like a valid website address.');return}
+    }else{target=pickedApp;if(!target){alert('Click Choose app… first.');return}}
+    chordsList.push({keys:recKeys.slice(),kind,target});sync();draw();
+    recKeys=[];$('#shk').textContent='';$('#shu').value='';pickedApp='';$('#shp').textContent='Choose app…';
+  };
+  $('#shl').onclick=e=>{const b=e.target.closest('button');if(!b)return;chordsList.splice(+b.dataset.i,1);sync();draw()};
+  $('#shh').onchange=()=>{sync();$('#shh').blur()};
+  draw();sync();
 }
 
 /* charging pictures (desktop app) */

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, ipcMain, screen, shell, dialog } = require('electron');
 const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -194,6 +194,35 @@ function createTray() {
   } catch (e) { tray = null; }
 }
 
+// Shortcuts: holding several keys together opens a website or an app
+let chords = [];
+const chordTimers = new Map(), chordFired = new Set();
+ipcMain.on('chords-set', (_e, list) => {
+  chordTimers.forEach(t => clearTimeout(t)); chordTimers.clear(); chordFired.clear();
+  chords = (Array.isArray(list) ? list : []).filter(c => c && Array.isArray(c.keys) && c.keys.length > 1 && typeof c.target === 'string').slice(0, 50);
+});
+ipcMain.handle('pick-app', async () => {
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile'] });
+  return r.canceled ? null : r.filePaths[0];
+});
+function runChord(c) {
+  if (c.kind === 'url') { if (/^https?:\/\//i.test(c.target)) shell.openExternal(c.target); }
+  else if (c.kind === 'app') shell.openPath(c.target);
+}
+function checkChords(down) {
+  const held = new Set([...down].map(c => keyNames[c]).filter(Boolean));
+  chords.forEach((c, i) => {
+    if (c.keys.every(k => held.has(k))) {
+      if (!chordFired.has(i) && !chordTimers.has(i)) {
+        chordTimers.set(i, setTimeout(() => { chordTimers.delete(i); chordFired.add(i); runChord(c); }, Math.max(100, +c.hold || 300)));
+      }
+    } else {
+      if (chordTimers.has(i)) { clearTimeout(chordTimers.get(i)); chordTimers.delete(i); }
+      chordFired.delete(i);
+    }
+  });
+}
+
 function startKeyListener() {
   if (!uIOhook) return;
   const down = new Set();
@@ -202,11 +231,12 @@ function startKeyListener() {
     down.add(e.keycode);
     const k = keyNames[e.keycode];
     if (!k || !win) return;
+    checkChords(down);
     // when the window is focused it handles keys itself
     if (win.isVisible() && win.isFocused()) return;
     win.webContents.send('global-key', k, { ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey });
   });
-  uIOhook.on('keyup', e => down.delete(e.keycode));
+  uIOhook.on('keyup', e => { down.delete(e.keycode); checkChords(down); });
   uIOhook.start();
 }
 
