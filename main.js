@@ -3,6 +3,9 @@ const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Keep using the folder created by the earlier version, so saved sounds and settings stay
+app.setPath('userData', path.join(app.getPath('appData'), 'Key Sounds'));
+
 let win = null, tray = null, quitting = false;
 
 // Global key listener (lets the app hear keys while it is in the background).
@@ -161,9 +164,9 @@ function showWindow() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 940,
-    height: 900,
-    title: 'Key Sounds',
+    width: 1100,
+    height: 860,
+    title: 'GenX',
     icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
@@ -183,9 +186,9 @@ function createTray() {
   try {
     const img = nativeImage.createFromPath(path.join(__dirname, 'icon.png')).resize({ width: 18, height: 18 });
     tray = new Tray(img);
-    tray.setToolTip('Key Sounds');
+    tray.setToolTip('GenX');
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: 'Open Key Sounds', click: showWindow },
+      { label: 'Open GenX', click: showWindow },
       { label: 'Turn background sounds on/off', click: () => win && win.webContents.send('toggle-background') },
       { type: 'separator' },
       { label: 'Quit', click: () => { quitting = true; app.quit(); } }

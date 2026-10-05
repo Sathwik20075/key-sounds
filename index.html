@@ -1,51 +1,83 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Key Sounds</title>
+<title>GenX</title>
 <style>
-:root{--bg:#e8ecf1;--fg:#16202b;--card:#f8fafc;--bd:#c5ced9;--ac:#0f8f8a;--acf:#fff;--mut:#58677a;--key:#fff;--keyb:#aab6c4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--fg:#e6edf5;--card:#192230;--bd:#2d3a4b;--ac:#3cc8c0;--acf:#06201f;--mut:#8b9bb0;--key:#243246;--keyb:#0b1018}}
-:root[data-theme="dark"]{--bg:#10161d;--fg:#e6edf5;--card:#192230;--bd:#2d3a4b;--ac:#3cc8c0;--acf:#06201f;--mut:#8b9bb0;--key:#243246;--keyb:#0b1018}
+:root{--bg:#f5f3ff;--fg:#241b4b;--card:#fff;--bd:#e4def7;--ac:#6c4cf1;--acf:#fff;--mut:#6e6892;--key:#fff;--keyb:#cfc6f0;--pink:#e24cc0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
-main{max-width:860px;margin:0 auto}
-h1{font-size:1.6rem;margin:4px 0 2px;letter-spacing:-.01em}
-h2{font-size:1rem;margin:0 0 10px}
+body{margin:0;color:var(--fg);font:15px/1.5 "Segoe UI Variable","Segoe UI",Inter,system-ui,-apple-system,sans-serif;background:radial-gradient(900px 520px at 95% -10%,#e3d9ff 0,transparent 60%),radial-gradient(700px 520px at -10% 110%,#ffe2da 0,transparent 60%),var(--bg);background-attachment:fixed}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;padding:20px 14px;display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.7);backdrop-filter:blur(10px);border-right:1px solid var(--bd)}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+.eq{display:flex;align-items:flex-end;gap:3px;height:28px;width:34px}
+.eq i{flex:1;height:25%;border-radius:3px;background:linear-gradient(var(--pink),var(--ac));transition:height .12s}
+.nv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:0;background:none;border-radius:12px;font-weight:600;color:var(--mut)}
+.nv span{font-size:1.15rem;width:24px;text-align:center}
+.nv:hover{background:#f0ecff;color:var(--fg)}
+.nv.on{background:linear-gradient(135deg,var(--ac),var(--pink));color:#fff;box-shadow:0 6px 16px rgba(108,76,241,.3)}
+.tip{margin-top:auto;font-size:12px;color:var(--mut);padding:10px;background:#f6f2ff;border-radius:12px}
+main{padding:26px 30px 40px;max-width:980px;width:100%}
+.page{display:none}
+.page.on{display:block;animation:pg .35s ease both}
+@keyframes pg{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+h1{font-size:1.9rem;margin:0;letter-spacing:-.02em}
+h2{font-size:1.05rem;margin:0 0 10px}
 p{margin:0 0 10px;color:var(--mut)}
-section{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:14px 0}
-button{font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 12px;cursor:pointer}
-button:hover{border-color:var(--ac)}
-button.pri{background:var(--ac);color:var(--acf);border-color:var(--ac);font-weight:600}
+.ph{margin-bottom:16px}
+.hero{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px;padding:22px 26px;border-radius:22px;color:#fff;background:linear-gradient(120deg,#6c4cf1,#b44cf1 55%,#ff7a59);box-shadow:0 14px 34px rgba(108,76,241,.28)}
+.hero p{color:rgba(255,255,255,.85);margin:4px 0 0}
+.now{display:flex;flex-direction:column;align-items:center;min-width:110px;padding:8px 14px;background:rgba(255,255,255,.18);border-radius:16px}
+.now b{font-size:2.2rem;line-height:1.1}
+.now span{font-size:12px;opacity:.9;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+section{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:18px;margin:0 0 16px;box-shadow:0 8px 26px rgba(108,76,241,.07)}
+button{font:inherit;font-weight:600;color:var(--fg);background:#fff;border:1px solid var(--bd);border-radius:10px;padding:6px 13px;cursor:pointer;transition:transform .1s,box-shadow .1s,border-color .1s}
+button:hover{border-color:var(--ac);transform:translateY(-1px);box-shadow:0 4px 10px rgba(108,76,241,.15)}
+button.pri{color:#fff;border:0;background:linear-gradient(135deg,var(--ac),var(--pink))}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
-#kb{display:flex;flex-direction:column;gap:4px}
-.row{display:flex;gap:4px}
-.key{flex:var(--u,1) 1 0;min-width:0;height:clamp(38px,6.2vw,54px);background:var(--key);border:1px solid var(--bd);border-bottom:3px solid var(--keyb);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;overflow:hidden}
+#kb{display:flex;flex-direction:column;gap:5px;padding:14px;border-radius:20px;background:linear-gradient(145deg,#e9e3ff,#f9f6ff);box-shadow:inset 0 2px 8px rgba(108,76,241,.12)}
+.row{display:flex;gap:5px}
+.key{flex:var(--u,1) 1 0;min-width:0;height:clamp(38px,6.2vw,54px);background:linear-gradient(#fff,#f3f0ff);border:1px solid #ddd6f5;border-bottom:4px solid var(--keyb);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;overflow:hidden;transition:transform .08s}
+.key:hover{transform:translateY(-1px)}
 .row.fr .key{height:clamp(28px,4.2vw,36px)}
-.key b{font-size:clamp(9px,1.5vw,13px);font-weight:600}
+.key b{font-size:clamp(9px,1.5vw,13px);font-weight:700}
 .key small{font-size:clamp(6px,.95vw,9px);color:var(--mut);max-width:100%;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:10px}
+.key.m{background:linear-gradient(#f1ebff,#ddd1ff);border-color:#b7a4ff;border-bottom-color:var(--ac)}
+.key.on{background:linear-gradient(var(--pink),var(--ac));color:#fff;transform:translateY(3px);border-bottom-width:1px}
+.key.on small{color:#fff}
 .stack{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px}
 .stack .key{height:auto;flex:1 1 0;border-bottom-width:2px}
 .stack small{display:none}
-.key.m{border-color:var(--ac);border-bottom-color:var(--ac)}
-.key.on{background:var(--ac);color:var(--acf);transform:translateY(2px);border-bottom-width:2px}
-.key.on small{color:var(--acf)}
-.item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;margin-bottom:6px}
-.item.sel{border-color:var(--ac);box-shadow:inset 3px 0 0 var(--ac)}
-.item .nm{flex:1;text-align:left;border:0;background:none;padding:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--bd);border-radius:14px;margin-bottom:7px;background:#fff}
+.item.sel{border-color:var(--ac);background:#f6f2ff;box-shadow:inset 4px 0 0 var(--ac)}
+.item .nm{flex:1;text-align:left;border:0;background:none;padding:2px;box-shadow:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .nm:hover{transform:none;box-shadow:none}
 .item .ks{font-size:12px;color:var(--mut)}
-canvas{width:100%;height:110px;display:block;border:1px solid var(--bd);border-radius:8px;background:var(--key)}
-.ck{display:flex;align-items:center;gap:4px;margin:0;color:var(--fg)}
-select{font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;width:100%;margin-top:4px}
+canvas{width:100%;height:110px;display:block;border:1px solid var(--bd);border-radius:14px;background:#faf8ff}
 label{display:block;font-size:13px;color:var(--mut);margin-top:8px}
+.ck{display:flex;align-items:center;gap:4px;margin:0;color:var(--fg)}
 input[type=range]{width:100%;accent-color:var(--ac)}
+select{font:inherit;color:var(--fg);background:#fff;border:1px solid var(--bd);border-radius:10px;padding:6px 8px;width:100%;margin-top:4px}
+#ev{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:0 18px}
 #file{display:none}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
-</style></head><body><main>
-<h1>Key Sounds</h1>
-<p>Press an assigned key to play its sound. Keys with no sound stay silent.</p>
-
+@media(max-width:780px){.app{grid-template-columns:1fr}.side{position:sticky;height:auto;flex-direction:row;overflow-x:auto;padding:8px;z-index:5}.brand,.tip{display:none}.nv{width:auto;white-space:nowrap}main{padding:16px 12px}.hero{flex-direction:column;align-items:flex-start}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body><div class="app">
+<aside class="side">
+<div class="brand"><div class="eq"><i></i><i></i><i></i><i></i><i></i></div>GenX</div>
+<nav>
+<button class="nv on" data-p="keys"><span>⌨️</span>Keyboard</button>
+<button class="nv" data-p="sounds"><span>🎵</span>Sounds</button>
+<button class="nv" data-p="events"><span>⚡</span>Events</button>
+<button class="nv" data-p="short"><span>🚀</span>Shortcuts</button>
+<button class="nv" data-p="charge"><span>🔋</span>Charging</button>
+</nav>
+<div class="tip">Tip: right-click a key to remove its sound.</div>
+</aside>
+<main>
+<div class="page on" data-p="keys">
+<div class="hero"><div><h1>Keyboard</h1><p>Pick a sound, then click a key to give it that sound.</p></div><div class="now"><b id="nk">·</b><span id="ns">Press a key</span></div></div>
 <section>
 <h2>Keyboard</h2>
 <div id="kb"></div>
@@ -57,7 +89,6 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <label style="margin:0 0 0 auto">Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" style="width:110px"></label>
 </div>
 </section>
-
 <section>
 <h2>Key options</h2>
 <div class="bar" style="margin:0 0 10px"><span>Assign with:</span>
@@ -67,21 +98,31 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <div class="bar"><button id="mute">Mute</button><select id="mt" style="width:auto;margin:0"><option value="0">until I unmute</option><option value="5">for 5 minutes</option><option value="15">for 15 minutes</option><option value="30">for 30 minutes</option><option value="60">for 1 hour</option></select></div>
 <div class="bar"><select id="ls" style="width:auto;margin:0"></select><input id="ln" placeholder="Layout name" style="font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 8px"><button id="lsv">Save layout</button><button id="ldel">Delete layout</button></div>
 </section>
-
+</div>
+<div class="page" data-p="sounds"><header class="ph"><h1>Sounds</h1><p>Add, record and trim the sounds you use.</p></header>
 <section>
 <h2>Sounds</h2>
 <div id="list"></div>
 <div class="bar"><button class="pri" id="add">Add your own sound</button><button id="rec">● Record</button><input id="file" type="file" accept="audio/*" multiple><span style="font-size:13px;color:var(--mut)">Pick a sound, then click a key above to assign it.</span></div>
 </section>
-
+<section>
+<h2>Trim: <span id="tn"></span></h2>
+<canvas id="wf" width="800" height="110"></canvas>
+<label>Start: <span id="ts-v"></span><input id="ts" type="range" min="0" max="1" step="0.001" value="0"></label>
+<label>End: <span id="te-v"></span><input id="te" type="range" min="0" max="1" step="0.001" value="1"></label>
+<div class="bar"><button id="pv">Preview range</button><button class="pri" id="sv">Save trim</button><button id="rs">Reset to full</button></div>
+</section>
+</div>
+<div class="page" data-p="events"><header class="ph"><h1>Events</h1><p>Play a sound when something happens on your laptop.</p></header>
 <section>
 <h2>Event sounds</h2>
 <div id="ev"></div>
 </section>
-
+</div>
+<div class="page" data-p="short"><header class="ph"><h1>Shortcuts</h1></header>
 <section id="shs" style="display:none">
 <h2>Shortcuts</h2>
-<p>Hold two or more keys together to open a website or an app. It works while Key Sounds runs in the tray.</p>
+<p>Hold two or more keys together to open a website or an app. It works while GenX runs in the tray.</p>
 <div id="shl"></div>
 <div class="bar"><button id="shr">Record keys</button><b id="shk" style="min-width:60px"></b>
 <select id="shkind" style="width:auto;margin:0"><option value="url">Website</option><option value="app">App or file</option></select>
@@ -89,7 +130,8 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <button id="shp" style="display:none">Choose app…</button><button class="pri" id="sha">Add shortcut</button></div>
 <label class="ck" style="margin-top:10px">Hold the keys for <select id="shh" style="width:auto;margin:0"><option value="200">0.2 s</option><option value="300">0.3 s</option><option value="500">0.5 s</option><option value="1000">1 s</option></select> <span style="color:var(--mut)">(stops accidental opens while typing)</span></label>
 </section>
-
+</div>
+<div class="page" data-p="charge"><header class="ph"><h1>Charging</h1></header>
 <section id="cps" style="display:none">
 <h2>Charging pictures</h2>
 <p>While the laptop is charging, a picture of your choice appears on the screen, depending on the battery level. Use an image, sticker, GIF, short video or emoji.</p>
@@ -102,17 +144,20 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <label class="ck">Position <select id="cpp" style="width:auto;margin:0"><option value="center">Center</option><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option><option value="bottom-right">Bottom right</option></select></label></div>
 <input type="file" id="cpf" accept="image/*,video/*" hidden>
 </section>
-
-<section>
-<h2>Trim: <span id="tn"></span></h2>
-<canvas id="wf" width="800" height="110"></canvas>
-<label>Start: <span id="ts-v"></span><input id="ts" type="range" min="0" max="1" step="0.001" value="0"></label>
-<label>End: <span id="te-v"></span><input id="te" type="range" min="0" max="1" step="0.001" value="1"></label>
-<div class="bar"><button id="pv">Preview range</button><button class="pri" id="sv">Save trim</button><button id="rs">Reset to full</button></div>
-</section>
+</div>
 </main>
+</div>
 <script>
 const $=s=>document.querySelector(s);
+/* look and feel: pages, live equalizer, "now playing" */
+document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nv,.page').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');document.querySelector('.page[data-p="'+b.dataset.p+'"]').classList.add('on');b.blur();
+});
+if(!window.keyApi)document.querySelectorAll('.nv[data-p="short"],.nv[data-p="charge"]').forEach(b=>b.style.display='none');
+let eqT;
+function eqHit(){const bs=document.querySelectorAll('.eq i');bs.forEach(b=>b.style.height=(30+Math.random()*70)+'%');clearTimeout(eqT);eqT=setTimeout(()=>bs.forEach(b=>b.style.height=''),170)}
+function nowShow(c,k){$('#nk').textContent=LABEL[c]||c;$('#ns').textContent=(get(map[k])||{}).name||''}
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const persist=()=>{try{localStorage.setItem('ks-map',JSON.stringify(map));localStorage.setItem('ks-trim',JSON.stringify(trims));localStorage.setItem('ks-vol',JSON.stringify(vols))}catch(e){}};
@@ -152,7 +197,7 @@ function play(id,a,b,v=1){
   const s=get(id);if(!s)return;if(ctx.state!=='running')ctx.resume();
   const r=range(s);a=a??r[0];b=b??r[1];
   const src=ctx.createBufferSource();src.buffer=s.buf;const g=ctx.createGain();g.gain.value=v;src.connect(g);g.connect(master);
-  src.start(0,a,Math.max(.01,b-a));
+  src.start(0,a,Math.max(.01,b-a));eqHit();
 }
 
 /* keyboard */
@@ -216,7 +261,7 @@ function resolve(c,f){
 let muteUntil=0,mTimer;
 const muted=()=>muteUntil>Date.now();
 const trig=(id,v=1)=>{if(!muted())play(id,undefined,undefined,v)};
-function press(c,f){const k=resolve(c,f);if(k){trig(map[k],vols[k]??1);flash(c)}return !!k}
+function press(c,f){const k=resolve(c,f);if(k){trig(map[k],vols[k]??1);flash(c);nowShow(c,k)}return !!k}
 function drawMute(){$('#mute').textContent=muted()?'Unmute':'Mute';$('#mute').classList.toggle('pri',muted())}
 $('#mute').onclick=()=>{clearTimeout(mTimer);if(muted())muteUntil=0;else{const m=+$('#mt').value;muteUntil=m?Date.now()+m*60000:Infinity;if(m)mTimer=setTimeout(drawMute,m*60000+50)}drawMute()};
 const kv=$('#kv');let lastKey='';
