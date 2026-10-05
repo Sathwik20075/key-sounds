@@ -1,6 +1,6 @@
 {
   "name": "key-sounds",
-  "version": "1.7.0",
+  "version": "1.9.0",
   "description": "Play sounds from your keyboard, with custom sounds and trimming",
   "main": "main.js",
   "scripts": {
