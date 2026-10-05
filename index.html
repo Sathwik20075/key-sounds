@@ -81,14 +81,15 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 
 <section id="cps" style="display:none">
 <h2>Charging pictures</h2>
-<p>While the laptop is charging, a picture of your choice appears on the screen, depending on the battery level.</p>
+<p>While the laptop is charging, a picture of your choice appears on the screen, depending on the battery level. Use an image, sticker, GIF, short video or emoji.</p>
 <div id="cp"></div>
+<div id="emp" class="item" style="display:none;flex-wrap:wrap"><div id="emg" style="display:flex;flex-wrap:wrap;gap:4px;width:100%"></div><input id="emi" placeholder="or type or paste your own emoji" style="font:inherit;color:var(--fg);background:var(--key);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;flex:1;min-width:160px"><button id="emo">Use</button><button id="emc">Cancel</button></div>
 <div class="bar"><label class="ck"><input type="checkbox" id="cpe"> Show pictures</label>
 <label class="ck">Show for <select id="cpd" style="width:auto;margin:0"><option value="3">3 seconds</option><option value="6">6 seconds</option><option value="10">10 seconds</option><option value="0">until unplugged</option></select></label></div>
 <div class="bar"><label class="ck">Size <select id="cps1" style="width:auto;margin:0"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label>
 <label class="ck">Animation <select id="cpa" style="width:auto;margin:0"><option value="float">Float</option><option value="bounce">Bounce</option><option value="pulse">Pulse</option><option value="swing">Swing</option><option value="slide">Slide across screen</option><option value="none">None</option></select></label>
 <label class="ck">Position <select id="cpp" style="width:auto;margin:0"><option value="center">Center</option><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option><option value="bottom-right">Bottom right</option></select></label></div>
-<input type="file" id="cpf" accept="image/*" hidden>
+<input type="file" id="cpf" accept="image/*,video/*" hidden>
 </section>
 
 <section>
@@ -242,7 +243,14 @@ $('#rec').onclick=async()=>{
 };
 
 /* event sounds */
-const EV=[['on','Charger plugged in'],['off','Charger unplugged'],['low','Battery low (20%)'],['full','Battery fully charged'],['net','Internet connected'],['nonet','Internet disconnected']];
+const EV=[['on','Charger plugged in'],['off','Charger unplugged'],['low','Battery low (20%)'],['full','Battery fully charged'],['net','Internet connected'],['nonet','Internet disconnected'],
+['storage_in','Pen drive, SD card or disk plugged in'],['storage_out','Pen drive, SD card or disk removed'],
+['usb_in','Other USB device plugged in (keyboard, mouse…)'],['usb_out','Other USB device removed'],
+['audio_in','Headphones or speaker connected'],['audio_out','Headphones or speaker disconnected'],
+['display_in','Monitor or HDMI connected'],['display_out','Monitor or HDMI disconnected'],
+['camera_in','Camera plugged in'],['camera_out','Camera removed'],
+['bluetooth_in','Bluetooth device connected'],['bluetooth_out','Bluetooth device disconnected'],
+['printer_in','Printer connected'],['printer_out','Printer disconnected']];
 let power=LS('ks-power',{on:'d5',off:'d7'});
 const savePower=()=>{try{localStorage.setItem('ks-power',JSON.stringify(power))}catch(e){}};
 const opts=cur=>'<option value="">No sound</option>'+sounds.map(s=>`<option value="${s.id}"${s.id===cur?' selected':''}>${esc(s.name)}</option>`).join('');
@@ -251,6 +259,7 @@ $('#ev').addEventListener('change',e=>{const k=e.target.dataset.e;if(!k)return;p
 $('#ev').addEventListener('click',e=>{const k=e.target.dataset.t;if(k&&power[k])play(power[k])});
 const evp=k=>{if(power[k])trig(power[k])};
 addEventListener('online',()=>evp('net'));addEventListener('offline',()=>evp('nonet'));
+if(window.keyApi&&keyApi.onSys)keyApi.onSys(n=>evp(n));
 if(navigator.getBattery){
   navigator.getBattery().then(b=>{
     let was=b.charging,last=0,low=false,full=false;
@@ -271,10 +280,11 @@ const TIERS=[['lo','Below 40%'],['mid','40% to 79%'],['hi','80% to full']];
 const tier=l=>l<.4?'lo':l<.8?'mid':'hi';
 let cp={on:true,secs:6,size:'small',anim:'float',pos:'center',...LS('ks-cp',{})},imgs={},cpTier='',lastTier='';
 const saveCp=()=>{try{localStorage.setItem('ks-cp',JSON.stringify(cp))}catch(e){}};
-function showTier(t,force){const i=imgs[t];if(!window.keyApi||!i||(!cp.on&&!force))return;keyApi.showOverlay(i.buf,i.type,cp.secs,{size:cp.size,anim:cp.anim,pos:cp.pos})}
+function showTier(t,force){const i=imgs[t];if(!window.keyApi||!i||(!cp.on&&!force))return;keyApi.showOverlay(i.buf||null,i.emoji?'emoji':i.type,cp.secs,{size:cp.size,anim:cp.anim,pos:cp.pos,emoji:i.emoji})}
+const prev=i=>!i?'<span class="ks">No picture</span>':i.emoji?`<span style="font-size:28px;line-height:1">${esc(i.emoji)}</span>`:i.type.startsWith('video/')?`<video src="${i.url}" muted loop autoplay style="height:40px;border-radius:4px"></video>`:`<img src="${i.url}" alt="" style="height:40px;border-radius:4px">`;
 function drawCP(){
   $('#cp').innerHTML=TIERS.map(([t,l])=>{const i=imgs[t];
-    return `<div class="item"><b style="min-width:105px">${l}</b>${i?`<img src="${i.url}" alt="" style="height:40px;border-radius:4px">`:'<span class="ks">No picture</span>'}<span style="flex:1"></span><button data-t="${t}" data-c="pick">Choose</button>${i?`<button data-t="${t}" data-c="show">Preview</button><button data-t="${t}" data-c="rm">Remove</button>`:''}</div>`}).join('');
+    return `<div class="item"><b style="min-width:105px">${l}</b>${prev(i)}<span style="flex:1"></span><button data-t="${t}" data-c="pick">Choose file</button><button data-t="${t}" data-c="emoji">Emoji</button>${i?`<button data-t="${t}" data-c="show">Preview</button><button data-t="${t}" data-c="rm">Remove</button>`:''}</div>`}).join('');
   $('#cpe').checked=cp.on;$('#cpd').value=String(cp.secs);$('#cps1').value=cp.size;$('#cpa').value=cp.anim;$('#cpp').value=cp.pos;
 }
 if(window.keyApi){
@@ -282,16 +292,28 @@ if(window.keyApi){
   $('#cp').addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;const t=b.dataset.t,c=b.dataset.c;
     if(c==='pick'){cpTier=t;$('#cpf').click()}
+    else if(c==='emoji'){cpTier=t;$('#emp').style.display='flex'}
     else if(c==='show')showTier(t,true);
-    else if(c==='rm'){tx('readwrite',o=>o.delete('img-'+t));URL.revokeObjectURL(imgs[t].url);delete imgs[t];drawCP()}
+    else if(c==='rm'){tx('readwrite',o=>o.delete('img-'+t));imgs[t].url&&URL.revokeObjectURL(imgs[t].url);delete imgs[t];drawCP()}
   });
   $('#cpf').onchange=async e=>{
     const f=e.target.files[0];e.target.value='';if(!f||!cpTier)return;
     const buf=await f.arrayBuffer(),type=f.type||'image/png';
     await tx('readwrite',o=>o.put({id:'img-'+cpTier,img:true,name:f.name,data:buf,type}));
-    if(imgs[cpTier])URL.revokeObjectURL(imgs[cpTier].url);
+    if(imgs[cpTier]&&imgs[cpTier].url)URL.revokeObjectURL(imgs[cpTier].url);
     imgs[cpTier]={buf,type,url:URL.createObjectURL(new Blob([buf],{type}))};drawCP();showTier(cpTier,true);
   };
+  const EMO=['⚡','🔋','🔌','😀','😎','🥳','🔥','⭐','💖','🚀','🌈','🎉','👍','✨','🐱','🐶','🍕','☀️','🌙','💎','🎵','🤖','👻','🦄'];
+  $('#emg').innerHTML=EMO.map(x=>`<button data-x="${x}" style="font-size:20px;padding:2px 6px">${x}</button>`).join('');
+  async function useEmoji(x){
+    x=x.trim();if(!x||!cpTier)return;
+    await tx('readwrite',o=>o.put({id:'img-'+cpTier,img:true,emoji:x}));
+    if(imgs[cpTier]&&imgs[cpTier].url)URL.revokeObjectURL(imgs[cpTier].url);
+    imgs[cpTier]={emoji:x};$('#emp').style.display='none';drawCP();showTier(cpTier,true);
+  }
+  $('#emg').onclick=e=>{const b=e.target.closest('button');if(b)useEmoji(b.dataset.x)};
+  $('#emo').onclick=()=>{useEmoji($('#emi').value);$('#emi').value=''};
+  $('#emc').onclick=()=>{$('#emp').style.display='none'};
   $('#cpe').onchange=e=>{cp.on=e.target.checked;saveCp();if(!cp.on)keyApi.hideOverlay()};
   $('#cpd').onchange=e=>{cp.secs=+e.target.value;saveCp()};
   for(const[id,key]of[['cps1','size'],['cpa','anim'],['cpp','pos']])$('#'+id).onchange=e=>{cp[key]=e.target.value;saveCp();const t=['lo','mid','hi'].find(x=>imgs[x]);if(t)showTier(t,true)};
@@ -356,7 +378,7 @@ addEventListener('pointerdown',()=>{if(ctx.state!=='running')ctx.resume()},{once
 drawKeys();drawList();loadTrim();
 (async()=>{
   const all=(await tx('readonly',o=>o.getAll()))||[];
-  for(const r of all){if(r.img){imgs[r.id.slice(4)]={buf:r.data,type:r.type,url:URL.createObjectURL(new Blob([r.data],{type:r.type}))};continue}try{sounds.push({id:r.id,name:r.name,buf:await ctx.decodeAudioData(r.data.slice(0)),custom:true})}catch(e){}}
+  for(const r of all){if(r.img){imgs[r.id.slice(4)]=r.emoji?{emoji:r.emoji}:{buf:r.data,type:r.type,url:URL.createObjectURL(new Blob([r.data],{type:r.type}))};continue}try{sounds.push({id:r.id,name:r.name,buf:await ctx.decodeAudioData(r.data.slice(0)),custom:true})}catch(e){}}
   drawKeys();drawList();drawCP();
 })();
 </script></body></html>

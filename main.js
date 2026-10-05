@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, ipcMain, screen } = require('electron');
+const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -44,13 +45,22 @@ ipcMain.on('overlay-hide', hideOverlay);
 ipcMain.on('overlay-show', (_e, buf, type, secs, opts) => {
   try {
     hideOverlay();
+    const o = Object.assign({ size: 'small', anim: 'float', pos: 'center' }, opts || {});
     const dir = app.getPath('userData');
     for (const f of fs.readdirSync(dir)) if (/^overlay-/.test(f)) { try { fs.unlinkSync(path.join(dir, f)); } catch (e) {} }
-    const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' }[type] || 'png';
     const stamp = Date.now();
-    fs.writeFileSync(path.join(dir, `overlay-${stamp}.${ext}`), Buffer.from(buf));
-    const htmlFile = path.join(dir, `overlay-${stamp}.html`);
-    const o = Object.assign({ size: 'small', anim: 'float', pos: 'center' }, opts || {});
+    let el;
+    if (type === 'emoji') {
+      el = `<div class="m e">${String(o.emoji || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</div>`;
+    } else {
+      const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg',
+        'video/mp4': 'mp4', 'video/webm': 'webm', 'video/ogg': 'ogv', 'video/quicktime': 'mov' }[type] || (String(type).startsWith('video/') ? 'mp4' : 'png');
+      const name = `overlay-${stamp}.${ext}`;
+      fs.writeFileSync(path.join(dir, name), Buffer.from(buf));
+      el = String(type).startsWith('video/')
+        ? `<video class="m" src="${name}" autoplay loop muted playsinline></video>`
+        : `<img class="m" src="${name}">`;
+    }
     const H = { small: 14, medium: 24, large: 40 }[o.size] || 14;
     const [av, jh] = { center: ['center', 'center'], 'top-left': ['flex-start', 'flex-start'], 'top-right': ['flex-start', 'flex-end'],
       'bottom-left': ['flex-end', 'flex-start'], 'bottom-right': ['flex-end', 'flex-end'] }[o.pos] || ['center', 'center'];
@@ -58,13 +68,15 @@ ipcMain.on('overlay-show', (_e, buf, type, secs, opts) => {
       pulse: 'pulse 1.2s ease-in-out infinite', swing: 'swing 1.6s ease-in-out infinite', slide: 'slide 5s linear infinite' }[o.anim] || 'none';
     const top = o.pos.startsWith('top') ? 'top:4vh' : o.pos.startsWith('bottom') ? 'bottom:4vh' : `top:calc(50% - ${H / 2}vh)`;
     const layout = o.anim === 'slide'
-      ? `.w{position:relative}img{position:absolute;left:0;${top}}`
+      ? `.w{position:relative}.m{position:absolute;left:0;${top}}`
       : `.w{display:flex;align-items:${av};justify-content:${jh};padding:4vh 3vw}`;
+    const htmlFile = path.join(dir, `overlay-${stamp}.html`);
     fs.writeFileSync(htmlFile, `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;height:100%;overflow:hidden;background:transparent}
 .w{width:100%;height:100%;box-sizing:border-box;animation:in .5s ease both}
 ${layout}
-img{height:${H}vh;width:auto;max-width:40vw;object-fit:contain;animation:${anim}}
+.m{height:${H}vh;width:auto;max-width:40vw;object-fit:contain;animation:${anim}}
+.e{height:auto;font-size:${Math.round(H * 0.9)}vh;line-height:1.1;white-space:nowrap}
 @keyframes in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 body.out .w{animation:out .5s ease both}
 @keyframes out{to{opacity:0;transform:scale(.9)}}
@@ -73,7 +85,7 @@ body.out .w{animation:out .5s ease both}
 @keyframes pulse{50%{transform:scale(1.18)}}
 @keyframes swing{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
 @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(100vw)}}
-</style><div class="w"><img src="overlay-${stamp}.${ext}"></div>`);
+</style><div class="w">${el}</div>`);
     const d = screen.getPrimaryDisplay().bounds;
     ov = new BrowserWindow({
       x: d.x, y: d.y, width: d.width, height: d.height,
@@ -88,6 +100,57 @@ body.out .w{animation:out .5s ease both}
     if (secs > 0) ovTimer = setTimeout(hideOverlay, secs * 1000);
   } catch (e) { console.warn('Overlay failed:', e.message); }
 });
+
+// ---- System events: devices, monitors ----
+const send = n => { if (win && !win.isDestroyed()) win.webContents.send('sys-event', n); };
+const psArgs = script => ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
+
+const DEV = { DiskDrive: 'storage', USBSTOR: 'storage', Keyboard: 'usb', Mouse: 'usb', HIDClass: 'usb', USB: 'usb',
+  AudioEndpoint: 'audio', Camera: 'camera', Image: 'camera', Bluetooth: 'bluetooth', Printer: 'printer', PrintQueue: 'printer' };
+let devSnap = null, devTimer = null;
+
+function snapshot(cb) {
+  const script = 'Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.Class } | Select-Object Class,InstanceId | ConvertTo-Json -Compress';
+  execFile('powershell.exe', psArgs(script), { windowsHide: true, maxBuffer: 64 * 1024 * 1024 }, (err, out) => {
+    if (err) return cb(null);
+    try {
+      let j = JSON.parse(out); if (!Array.isArray(j)) j = [j];
+      const m = new Map();
+      for (const d of j) if (DEV[d.Class]) m.set(d.InstanceId, DEV[d.Class]);
+      cb(m);
+    } catch (e) { cb(null); }
+  });
+}
+function emitCats(set, dir) {
+  if (set.size > 1) set.delete('usb');      // a specific kind (e.g. pen drive) wins over generic USB
+  for (const c of set) send(`${c}_${dir}`);
+}
+function watchDevices() {
+  snapshot(m => { devSnap = m; });
+  const script = "Register-WmiEvent -Class Win32_DeviceChangeEvent -SourceIdentifier d | Out-Null; while ($true) { Wait-Event -SourceIdentifier d | Out-Null; Remove-Event -SourceIdentifier d; [Console]::WriteLine('chg') }";
+  const ps = spawn('powershell.exe', psArgs(script), { windowsHide: true });
+  ps.on('error', () => {});
+  ps.stdout.on('data', () => {
+    clearTimeout(devTimer);
+    devTimer = setTimeout(() => snapshot(m => {
+      if (!m) return;
+      if (devSnap) {
+        const add = new Set(), rem = new Set();
+        for (const [id, c] of m) if (!devSnap.has(id)) add.add(c);
+        for (const [id, c] of devSnap) if (!m.has(id)) rem.add(c);
+        emitCats(add, 'in'); emitCats(rem, 'out');
+      }
+      devSnap = m;
+    }), 1500);
+  });
+  app.on('will-quit', () => { try { ps.kill(); } catch (e) {} });
+}
+
+function startSystemWatchers() {
+  screen.on('display-added', () => send('display_in'));
+  screen.on('display-removed', () => send('display_out'));
+  if (process.platform === 'win32') { watchDevices(); }
+}
 
 function showWindow() {
   if (!win) return;
@@ -156,6 +219,7 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     createTray();
     startKeyListener();
+    startSystemWatchers();
     globalShortcut.register('CommandOrControl+Alt+K', () => win && win.webContents.send('toggle-background'));
     app.on('activate', showWindow);
   });
